@@ -1,30 +1,18 @@
-use std::{fmt::Debug, time::Duration};
+use std::error::Error;
+use std::fmt::Debug;
 
-use confy::{self, ConfyError};
-use ftp::FtpStream;
+use confy::{self};
 use serde::{Deserialize, Serialize};
 
 static CONFIG_FILE_NAME: &str = "klikbox-ftp-client";
+
+type Res<T> = Result<T, Box<dyn Error>>;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     ip: String,
     src: String,
     dst: String,
-}
-
-impl Config {
-    fn load() -> Result<Config, String> {
-        let cfg = match confy::load(CONFIG_FILE_NAME) {
-            Ok(config) => config,
-            error => return Err(format!("Failed to read config file: {:?}", error)),
-        };
-        println!("cfg: {:?}", cfg);
-        match confy::store(CONFIG_FILE_NAME, &cfg) {
-            Ok(_) => Ok(cfg),
-            error => return Err(format!("Failed to write config file: {:?}", error)),
-        }
-    }
 }
 
 impl ::std::default::Default for Config {
@@ -37,21 +25,31 @@ impl ::std::default::Default for Config {
     }
 }
 
-struct Connection {
-    stream: FtpStream,
-}
-
-impl Connection {
-    fn new(ip: &str) -> Result<Self, String> {
-        match FtpStream::connect(ip) {
-            Ok(stream) => return Ok(Connection { stream }),
-            error => Err(format!("Failed to connect to {}: {:?}", ip, error)),
-        }
+impl Config {
+    fn load() -> Res<Config> {
+        let cfg: Config = confy::load(CONFIG_FILE_NAME)?;
+        println!("cfg: {:?}", cfg);
+        confy::store(CONFIG_FILE_NAME, &cfg)?;
+        Ok(cfg)
     }
 }
 
+// struct Connection {
+//     stream: FtpStream,
+// }
+
+// impl Connection {
+//     fn new(ip: &str) -> Res<Self> {
+//       let stream = FtpStream::connect(ip)?;
+//       Ok(Self { stream })
+//     }
+// }
+
 fn main() {
-    run();
+    match run() {
+        Err(err) => println!("Error: {:?}", err),
+        Ok(_) => println!("Done"),
+    }
 
     // println!("Connected!");
     // ftp_stream
@@ -67,7 +65,7 @@ fn main() {
     // let _ = ftp_stream.quit();
 }
 
-fn run() -> Result<(), String> {
-    let cfg = Config::load()?;
+fn run() -> Res<()> {
+    let _ = Config::load()?;
     Ok(())
 }

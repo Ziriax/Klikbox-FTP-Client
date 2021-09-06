@@ -1,7 +1,26 @@
-docker build -t ftp-server-image .
+@echo off
 
-docker rm -f ftp-server-container
+setlocal
 
-REM run the ftp server instance in detached mode (in the background)
-REM but also with TTY and interactive mode, so we can attach to it if we want to
-docker run -dti --name ftp-server-container --privileged -p 21:21 -p 65000-65010:65000-65010 ftp-server-image
+cd /d %~dp0
+
+SET DOCKER_BUILDKIT=1
+
+docker container rm -f ftp-server-container
+
+docker run -ti --name ftp-server-container --volume "%~dp0source":/source --privileged -p 21:21 -p 65000-65010:65000-65010 ftp-server-image /source/script.sh
+
+rem docker run -ti --name ftp-server-container --volume "%~dp0source":/source --privileged -p 20:20 -p 21:21 -p 65000-65010:65000-65010 ftp-server-image /bin/bash
+
+if errorlevel 1 goto :error
+
+echo %~n0 :-) success!
+goto :exit
+
+:error
+echo %~n0 :-( failure!
+
+:exit
+endlocal
+
+cd /d %~dp0
